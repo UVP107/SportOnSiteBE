@@ -6,7 +6,7 @@ import User from "../models/user.model";
 const JWT_SECRET = process.env.JWT_SECRET || "SportOn123";
 const JWT_EXPIRES_IN = "1d";
 
-export const register = async (req: Request, res: Response): Promise<void> => {
+export const signin = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, email, password } = req.body;
     // check if user already exists
@@ -22,16 +22,14 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
     // create token
-    const token = jwt.sign({ email }, JWT_SECRET, {
+    const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, {
       expiresIn: JWT_EXPIRES_IN,
     });
-    res.status(200).json({ id: user._id, email: user.email, JWT_SECRET });
     res.json({
       token,
       user: {
-        name,
-        email,
-        password,
+        id: user._id,
+        email: user.email,
       },
     });
   } catch (error) {
@@ -44,17 +42,35 @@ export const initiateAdmin = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
+  console.log("DEBUG: Incoming Body ->", req.body); // Check if keys are missing
+
   try {
     const { email, password, name } = req.body;
     const count = await User.countDocuments({});
+
     if (count > 0) {
-      res
-        .status(400)
-        .json({ message: "admin already exists, delete and create again" });
+      console.log("DEBUG: Blocked because count is", count);
+      res.status(400).json({
+        message: "admin already exists",
+        currentCount: count,
+      });
       return;
     }
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "server error" });
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const newUser = new User({ email, password: hashedPassword, name });
+
+    await newUser.save();
+    res.status(200).json({ message: "admin created successfully" });
+  } catch (error: any) {
+    // This is the "Blind 400" spot!
+    console.error("DEBUG: Mongoose Save Error ->", error);
+    res.status(400).json({
+      message: "Validation or Database Error",
+      details: error.message, // This will tell you if 'name' is missing
+      stack: error.name,
+    });
   }
 };
