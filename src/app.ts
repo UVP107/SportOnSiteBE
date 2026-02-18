@@ -5,6 +5,8 @@ import { authenticate } from "./middlewares/auth.middlewares";
 import path from "node:path";
 import categoryRoutes from "./routes/category.routes";
 import productRoutes from "./routes/product.routes";
+import bankRoutes from "./routes/bank.routes";
+import transactionRoutes from "./routes/transaction.router";
 
 const app = express();
 
@@ -17,6 +19,8 @@ app.use(cors());
 app.use("/api/auth", authRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/products", productRoutes);
+app.use("/api/banks", bankRoutes);
+app.use("/api/transactions", transactionRoutes);
 
 app.get("/", (req, res) => {
   res.send("backend is running!");
